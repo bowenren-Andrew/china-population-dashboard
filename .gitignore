@@ -1,14 +1,29 @@
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
 .venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local environment and secrets
 .env
 .env.*
 !.env.example
 .streamlit/secrets.toml
+
+# Notebooks and local tooling
 .ipynb_checkpoints/
-.pytest_cache/
+*.log
+*.tmp
+
+# Local data caches
+data/cache/
+data/downloads/
+data/*.tmp.csv
+
+# OS files
 .DS_Store
 Thumbs.db
-*.log
-data/cache/
-data/*.tmp.csv
+desktop.ini
