@@ -27,3 +27,10 @@ data/*.tmp.csv
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Local Streamlit Cloud deployment diagnostics
+docs/verification/06-streamlit-advanced.png
+docs/verification/06-streamlit-deploy-form.png
+docs/verification/06-streamlit-deploy-page.png
+docs/verification/06-streamlit-login.png
+docs/verification/06-streamlit-signed-in.png

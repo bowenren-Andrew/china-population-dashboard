@@ -4,6 +4,8 @@
 
 原项目是一个使用 Python + Streamlit 的人口仪表盘模板；本仓库保留其视觉基础和原作者署名，数据、地图、指标与交互均已替换为中国大陆 31 个省级行政区。
 
+在线演示：[china-population-dashboard.streamlit.app](https://china-population-dashboard.streamlit.app/)
+
 ![中国人口仪表盘首页](docs/verification/02-china-home.png)
 
 ## 项目内容
@@ -90,7 +92,7 @@ data/build_china_population.py   年鉴原始 CSV → reshaped CSV
 data/validate_china_population.py 数据校验
 data/build_geojson.py            GeoJSON 裁剪和校验
 tests/test_dashboard.py          unittest 测试
-docs/verification/               本地验收截图
+docs/verification/               本地与线上验收截图
 ```
 
 ## 指标说明
@@ -129,16 +131,24 @@ plotly==5.24.1
 
 ## Streamlit Community Cloud 部署
 
-从本仓库部署：
+当前线上地址：[https://china-population-dashboard.streamlit.app/](https://china-population-dashboard.streamlit.app/)
+
+部署配置：
+
+- Repository：`bowenren-Andrew/china-population-dashboard`
+- Branch：`master`
+- Main file path：`streamlit_app.py`
+- Python：`3.13`
+- Secrets：不需要；应用只读取仓库内的 CSV 和 GeoJSON
+
+如需从 fork 重新创建应用：
 
 1. 在 Streamlit Community Cloud 选择 **New app**。
-2. Repository 选择 `bowenren-Andrew/china-population-dashboard`。
-3. Branch 选择 `master`。
-4. Main file path 填写 `streamlit_app.py`。
-5. 不需要 Secrets；应用只读取仓库内的 CSV 和 GeoJSON。
-6. 在 Advanced settings 中优先选择 Python 3.13；如果平台当时尚未提供 3.13，先使用平台可用的兼容版本运行并复核依赖安装结果。
+2. 填写上述 Repository、Branch 和 Main file path。
+3. 在 Advanced settings 中选择 Python 3.13。
+4. 不需要填写 Secrets，点击 Deploy。
 
-部署后应检查：首页地图有 31 个省份、热力图和环形图非空、年份/省份筛选可切换、CSV 下载可用。
+线上验收截图见 `docs/verification/06-streamlit-live.png` 和 `docs/verification/07-streamlit-province-trend.png`。已验证首页地图有 31 个省级路径、热力图和环形图非空、年份/省份筛选可切换、配色主题可切换、CSV 下载可用，页面无 Streamlit 异常。
 
 ## 原项目与署名
 
