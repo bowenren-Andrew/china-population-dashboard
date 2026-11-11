@@ -1,0 +1,63 @@
+{
+  "source_name": "阿里云 DataV.GeoAtlas 中国省级行政区划",
+  "source_url": "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json",
+  "downloaded_at": "2026-11-11",
+  "source_file": "data/raw/geojson/100000_full.json",
+  "source_sha256": "99adfeded5223848bbe37a0a12f8023e11ee12161c7800521c27db42fdeac275",
+  "source_feature_count": 35,
+  "output_file": "data/china-provinces.geojson",
+  "output_sha256": "0868775672d6d3240eadb530400b93519e87ceae96db8efc718164d8bc9db87e",
+  "output_feature_count": 31,
+  "included_adcodes": [
+    "110000",
+    "120000",
+    "130000",
+    "140000",
+    "150000",
+    "210000",
+    "220000",
+    "230000",
+    "310000",
+    "320000",
+    "330000",
+    "340000",
+    "350000",
+    "360000",
+    "370000",
+    "410000",
+    "420000",
+    "430000",
+    "440000",
+    "450000",
+    "460000",
+    "500000",
+    "510000",
+    "520000",
+    "530000",
+    "540000",
+    "610000",
+    "620000",
+    "630000",
+    "640000",
+    "650000"
+  ],
+  "excluded_features": [
+    {
+      "name": "台湾省",
+      "adcode": "710000"
+    },
+    {
+      "name": "香港特别行政区",
+      "adcode": "810000"
+    },
+    {
+      "name": "澳门特别行政区",
+      "adcode": "820000"
+    },
+    {
+      "name": "",
+      "adcode": "100000_JD"
+    }
+  ],
+  "boundary_note": "仅用于统计可视化，不作为行政区划或边界依据。"
+}

@@ -1,25 +1,43 @@
-#######################
-# Import libraries
-import streamlit as st
-import pandas as pd
+"""China population dashboard entry point."""
+from __future__ import annotations
+
 import altair as alt
-import plotly.express as px
+import streamlit as st
 
-#######################
-# Page configuration
+from dashboard.charts import (
+    COLOR_THEMES,
+    make_donut,
+    make_heatmap,
+    make_trend,
+)
+from dashboard.choropleth import make_choropleth
+from dashboard.data import (
+    MIGRATION_THRESHOLD,
+    DataValidationError,
+    build_download_dataframe,
+    calculate_migration_counts,
+    calculate_population_difference,
+    dataframe_to_utf8_csv,
+    filter_by_provinces,
+    get_province_options,
+    get_trend_data,
+    get_year_list,
+    load_dashboard_data,
+)
+from dashboard.formatting import format_number
+
 st.set_page_config(
-    page_title="US Population Dashboard",
-    page_icon="🏂",
+    page_title="中国人口仪表盘",
+    page_icon="👥",
     layout="wide",
-    initial_sidebar_state="expanded")
+    initial_sidebar_state="expanded",
+)
 
-alt.themes.enable("dark")
+alt.theme.enable("dark")
 
-#######################
-# CSS styling
-st.markdown("""
+st.markdown(
+    """
 <style>
-
 [data-testid="block-container"] {
     padding-left: 2rem;
     padding-right: 2rem;
@@ -40,237 +58,194 @@ st.markdown("""
 }
 
 [data-testid="stMetricLabel"] {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 [data-testid="stMetricDeltaIcon-Up"] {
     position: relative;
     left: 38%;
-    -webkit-transform: translateX(-50%);
-    -ms-transform: translateX(-50%);
     transform: translateX(-50%);
 }
 
 [data-testid="stMetricDeltaIcon-Down"] {
     position: relative;
     left: 38%;
-    -webkit-transform: translateX(-50%);
-    -ms-transform: translateX(-50%);
     transform: translateX(-50%);
 }
 
+[data-testid="stDownloadButton"] button {
+    width: 100%;
+}
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
+try:
+    dataset, province_mapping, china_geojson = load_dashboard_data()
+except DataValidationError as exc:
+    st.error(f"数据校验失败：{exc}")
+    st.stop()
 
-#######################
-# Load data
-df_reshaped = pd.read_csv('data/us-population-2010-2019-reshaped.csv')
-
-
-#######################
-# Sidebar
 with st.sidebar:
-    st.title('🏂 US Population Dashboard')
-    
-    year_list = list(df_reshaped.year.unique())[::-1]
-    
-    selected_year = st.selectbox('Select a year', year_list)
-    df_selected_year = df_reshaped[df_reshaped.year == selected_year]
-    df_selected_year_sorted = df_selected_year.sort_values(by="population", ascending=False)
+    st.title("👥 中国人口仪表盘")
+    st.caption("2010–2023 · 31 个大陆省级行政区")
+    st.divider()
 
-    color_theme_list = ['blues', 'cividis', 'greens', 'inferno', 'magma', 'plasma', 'reds', 'rainbow', 'turbo', 'viridis']
-    selected_color_theme = st.selectbox('Select a color theme', color_theme_list)
+    year_list = get_year_list(dataset)
+    selected_year = st.selectbox("选择年份", year_list)
 
-
-#######################
-# Plots
-
-# Heatmap
-def make_heatmap(input_df, input_y, input_x, input_color, input_color_theme):
-    heatmap = alt.Chart(input_df).mark_rect().encode(
-            y=alt.Y(f'{input_y}:O', axis=alt.Axis(title="Year", titleFontSize=18, titlePadding=15, titleFontWeight=900, labelAngle=0)),
-            x=alt.X(f'{input_x}:O', axis=alt.Axis(title="", titleFontSize=18, titlePadding=15, titleFontWeight=900)),
-            color=alt.Color(f'max({input_color}):Q',
-                             legend=None,
-                             scale=alt.Scale(scheme=input_color_theme)),
-            stroke=alt.value('black'),
-            strokeWidth=alt.value(0.25),
-        ).properties(width=900
-        ).configure_axis(
-        labelFontSize=12,
-        titleFontSize=12
-        ) 
-    # height=300
-    return heatmap
-
-# Choropleth map
-def make_choropleth(input_df, input_id, input_column, input_color_theme):
-    choropleth = px.choropleth(input_df, locations=input_id, color=input_column, locationmode="USA-states",
-                               color_continuous_scale=input_color_theme,
-                               range_color=(0, max(df_selected_year.population)),
-                               scope="usa",
-                               labels={'population':'Population'}
-                              )
-    choropleth.update_layout(
-        template='plotly_dark',
-        plot_bgcolor='rgba(0, 0, 0, 0)',
-        paper_bgcolor='rgba(0, 0, 0, 0)',
-        margin=dict(l=0, r=0, t=0, b=0),
-        height=350
+    province_options = get_province_options(province_mapping)
+    selected_provinces = st.multiselect(
+        "省份（可搜索、多选）",
+        options=province_options,
+        default=province_options,
     )
-    return choropleth
+    if len(selected_provinces) == 1:
+        st.caption("已选择单个省份，主面板下方将显示历年趋势。")
 
+    selected_color_theme = st.selectbox("选择配色主题", COLOR_THEMES)
+    st.divider()
 
-# Donut chart
-def make_donut(input_response, input_text, input_color):
-  if input_color == 'blue':
-      chart_color = ['#29b5e8', '#155F7A']
-  if input_color == 'green':
-      chart_color = ['#27AE60', '#12783D']
-  if input_color == 'orange':
-      chart_color = ['#F39C12', '#875A12']
-  if input_color == 'red':
-      chart_color = ['#E74C3C', '#781F16']
-    
-  source = pd.DataFrame({
-      "Topic": ['', input_text],
-      "% value": [100-input_response, input_response]
-  })
-  source_bg = pd.DataFrame({
-      "Topic": ['', input_text],
-      "% value": [100, 0]
-  })
-    
-  plot = alt.Chart(source).mark_arc(innerRadius=45, cornerRadius=25).encode(
-      theta="% value",
-      color= alt.Color("Topic:N",
-                      scale=alt.Scale(
-                          #domain=['A', 'B'],
-                          domain=[input_text, ''],
-                          # range=['#29b5e8', '#155F7A']),  # 31333F
-                          range=chart_color),
-                      legend=None),
-  ).properties(width=130, height=130)
-    
-  text = plot.mark_text(align='center', color="#29b5e8", font="Lato", fontSize=32, fontWeight=700, fontStyle="italic").encode(text=alt.value(f'{input_response} %'))
-  plot_bg = alt.Chart(source_bg).mark_arc(innerRadius=45, cornerRadius=20).encode(
-      theta="% value",
-      color= alt.Color("Topic:N",
-                      scale=alt.Scale(
-                          # domain=['A', 'B'],
-                          domain=[input_text, ''],
-                          range=chart_color),  # 31333F
-                      legend=None),
-  ).properties(width=130, height=130)
-  return plot_bg + plot + text
+if not selected_provinces:
+    st.warning("请至少选择一个省份。")
+    st.stop()
 
-# Convert population to text 
-def format_number(num):
-    if num > 1000000:
-        if not num % 1000000:
-            return f'{num // 1000000} M'
-        return f'{round(num / 1000000, 1)} M'
-    return f'{num // 1000} K'
+selected_codes = province_mapping.loc[
+    province_mapping["provinces"].isin(selected_provinces), "provinces_code"
+].tolist()
 
-# Calculation year-over-year population migrations
-def calculate_population_difference(input_df, input_year):
-  selected_year_data = input_df[input_df['year'] == input_year].reset_index()
-  previous_year_data = input_df[input_df['year'] == input_year - 1].reset_index()
-  selected_year_data['population_difference'] = selected_year_data.population.sub(previous_year_data.population, fill_value=0)
-  return pd.concat([selected_year_data.states, selected_year_data.id, selected_year_data.population, selected_year_data.population_difference], axis=1).sort_values(by="population_difference", ascending=False)
+year_data = dataset[dataset["year"] == selected_year]
+year_data = filter_by_provinces(year_data, selected_codes).sort_values(
+    "population", ascending=False
+)
+yoy_all = calculate_population_difference(dataset, selected_year)
+yoy_selected = yoy_all[yoy_all["provinces_code"].isin(selected_codes)].copy()
+heatmap_data = filter_by_provinces(dataset, selected_codes)
 
+download_data = build_download_dataframe(year_data, yoy_selected)
+with st.sidebar:
+    st.download_button(
+        "下载当前筛选数据 CSV",
+        data=dataframe_to_utf8_csv(download_data),
+        file_name=f"china-population-{selected_year}.csv",
+        mime="text/csv",
+    )
+    st.caption("下载内容为当前年份和已选省份。")
 
-#######################
-# Dashboard Main Panel
-col = st.columns((1.5, 4.5, 2), gap='medium')
+col = st.columns((1.5, 4.5, 2), gap="medium")
 
 with col[0]:
-    st.markdown('#### Gains/Losses')
+    st.markdown("#### 增长 / 减少")
+    has_previous_year = selected_year > min(year_list)
+    valid_differences = yoy_selected.dropna(subset=["population_difference"])
 
-    df_population_difference_sorted = calculate_population_difference(df_reshaped, selected_year)
-
-    if selected_year > 2010:
-        first_state_name = df_population_difference_sorted.states.iloc[0]
-        first_state_population = format_number(df_population_difference_sorted.population.iloc[0])
-        first_state_delta = format_number(df_population_difference_sorted.population_difference.iloc[0])
+    if has_previous_year and not valid_differences.empty:
+        sorted_differences = valid_differences.sort_values(
+            "population_difference", ascending=False
+        )
+        largest = sorted_differences.iloc[0]
+        smallest = sorted_differences.iloc[-1]
+        st.metric(
+            label=largest["provinces"],
+            value=format_number(largest["population"]),
+            delta=format_number(largest["population_difference"]),
+        )
+        st.metric(
+            label=smallest["provinces"],
+            value=format_number(smallest["population"]),
+            delta=format_number(smallest["population_difference"]),
+        )
     else:
-        first_state_name = '-'
-        first_state_population = '-'
-        first_state_delta = ''
-    st.metric(label=first_state_name, value=first_state_population, delta=first_state_delta)
+        st.metric(label="-", value="-")
+        st.metric(label="-", value="-")
+        st.caption("2010 年没有上年数据，无法计算同比。")
 
-    if selected_year > 2010:
-        last_state_name = df_population_difference_sorted.states.iloc[-1]
-        last_state_population = format_number(df_population_difference_sorted.population.iloc[-1])   
-        last_state_delta = format_number(df_population_difference_sorted.population_difference.iloc[-1])   
+    st.markdown("#### 省份迁移")
+
+    if has_previous_year and not valid_differences.empty:
+        inbound_count, outbound_count = calculate_migration_counts(valid_differences)
+        denominator = len(selected_codes)
+        inbound_percent = round(inbound_count / denominator * 100)
+        outbound_percent = round(outbound_count / denominator * 100)
     else:
-        last_state_name = '-'
-        last_state_population = '-'
-        last_state_delta = ''
-    st.metric(label=last_state_name, value=last_state_population, delta=last_state_delta)
+        inbound_percent = 0
+        outbound_percent = 0
 
-    
-    st.markdown('#### States Migration')
-
-    if selected_year > 2010:
-        # Filter states with population difference > 50000
-        # df_greater_50000 = df_population_difference_sorted[df_population_difference_sorted.population_difference_absolute > 50000]
-        df_greater_50000 = df_population_difference_sorted[df_population_difference_sorted.population_difference > 50000]
-        df_less_50000 = df_population_difference_sorted[df_population_difference_sorted.population_difference < -50000]
-        
-        # % of States with population difference > 50000
-        states_migration_greater = round((len(df_greater_50000)/df_population_difference_sorted.states.nunique())*100)
-        states_migration_less = round((len(df_less_50000)/df_population_difference_sorted.states.nunique())*100)
-        donut_chart_greater = make_donut(states_migration_greater, 'Inbound Migration', 'green')
-        donut_chart_less = make_donut(states_migration_less, 'Outbound Migration', 'red')
-    else:
-        states_migration_greater = 0
-        states_migration_less = 0
-        donut_chart_greater = make_donut(states_migration_greater, 'Inbound Migration', 'green')
-        donut_chart_less = make_donut(states_migration_less, 'Outbound Migration', 'red')
-
-    migrations_col = st.columns((0.2, 1, 0.2))
-    with migrations_col[1]:
-        st.write('Inbound')
-        st.altair_chart(donut_chart_greater)
-        st.write('Outbound')
-        st.altair_chart(donut_chart_less)
+    donut_inbound = make_donut(inbound_percent, "净增省份", "green")
+    donut_outbound = make_donut(outbound_percent, "净减省份", "red")
+    migration_col = st.columns((0.2, 1, 0.2))
+    with migration_col[1]:
+        st.write("净增省份占比")
+        st.altair_chart(donut_inbound)
+        st.write("净减省份占比")
+        st.altair_chart(donut_outbound)
+    st.caption(
+        f"阈值为同比变化 {format_number(MIGRATION_THRESHOLD)}；常住人口变化不等同于户籍迁移统计。"
+    )
 
 with col[1]:
-    st.markdown('#### Total Population')
-    
-    choropleth = make_choropleth(df_selected_year, 'states_code', 'population', selected_color_theme)
-    st.plotly_chart(choropleth, use_container_width=True)
-    
-    heatmap = make_heatmap(df_reshaped, 'year', 'states', 'population', selected_color_theme)
+    st.markdown("#### 总人口")
+    choropleth = make_choropleth(
+        year_data,
+        "provinces_code",
+        "population",
+        selected_color_theme,
+        china_geojson,
+    )
+    st.markdown(choropleth, unsafe_allow_html=True)
+    st.caption("地图覆盖 31 个大陆省级行政区，不含港澳台；GeoJSON 本地渲染，仅用于统计可视化。")
+
+    st.markdown("##### 年份 × 省份人口")
+    heatmap = make_heatmap(
+        heatmap_data,
+        "year",
+        "provinces",
+        "population",
+        selected_color_theme,
+    )
     st.altair_chart(heatmap, use_container_width=True)
-    
 
 with col[2]:
-    st.markdown('#### Top States')
+    st.markdown("#### 省份人口排名")
+    st.dataframe(
+        year_data,
+        column_order=("provinces", "population"),
+        hide_index=True,
+        column_config={
+            "provinces": st.column_config.TextColumn("省份"),
+            "population": st.column_config.ProgressColumn(
+                "人口",
+                format="%d",
+                min_value=0,
+                max_value=int(year_data["population"].max()),
+            ),
+        },
+    )
 
-    st.dataframe(df_selected_year_sorted,
-                 column_order=("states", "population"),
-                 hide_index=True,
-                 width=None,
-                 column_config={
-                    "states": st.column_config.TextColumn(
-                        "States",
-                    ),
-                    "population": st.column_config.ProgressColumn(
-                        "Population",
-                        format="%f",
-                        min_value=0,
-                        max_value=max(df_selected_year_sorted.population),
-                     )}
-                 )
-    
-    with st.expander('About', expanded=True):
-        st.write('''
-            - Data: [U.S. Census Bureau](https://www.census.gov/data/datasets/time-series/demo/popest/2010s-state-total.html).
-            - :orange[**Gains/Losses**]: states with high inbound/ outbound migration for selected year
-            - :orange[**States Migration**]: percentage of states with annual inbound/ outbound migration > 50,000
-            ''')
+    with st.expander("关于项目", expanded=True):
+        st.markdown(
+            """
+- 数据：国家统计局《中国统计年鉴》分地区年末人口数，2010–2023 年，单位“人”。
+- 范围：31 个大陆省级行政区，不含港澳台。
+- 2010 年数据来自《中国统计年鉴 2020》，2011–2020 年使用《中国统计年鉴 2021》七普后修订序列，2021–2023 年来自《中国统计年鉴 2024》。
+- :orange[**增长 / 减少**]：所选省份中同比人口变化最大和最小的两个省份。
+- :orange[**省份迁移**]：同比人口变化超过 ±20 万人的省份占比，仅作为人口净变化的近似观察。
+- 地图底图：阿里云 DataV.GeoAtlas 省级 GeoJSON（随仓库打包，离线渲染），仅用于数据可视化，不作为行政区划或边界依据。
+- 原项目：[dataprofessor/population-dashboard][upstream]
+- 本项目基于原项目 fork 改造；原作者为 Chanin Nantasenamat（dataprofessor）。
+
+[upstream]: https://github.com/dataprofessor/population-dashboard
+"""
+        )
+
+if len(selected_provinces) == 1:
+    selected_code = selected_codes[0]
+    selected_name = selected_provinces[0]
+    st.markdown(f"#### {selected_name}历年人口趋势")
+    trend_data = get_trend_data(dataset, selected_code)
+    trend = make_trend(trend_data, selected_color_theme)
+    st.altair_chart(trend, use_container_width=True)
+    st.caption("数据为年末常住人口，2010–2023 年。")
