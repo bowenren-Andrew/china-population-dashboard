@@ -1,0 +1,34 @@
+{
+  "downloaded_at": "2026-11-11",
+  "unit": "万人",
+  "national_scope": "31个大陆省级行政区（不含港澳台）",
+  "sources": [
+    {
+      "table": "中国统计年鉴2020 表2-6 分地区年末人口数",
+      "page": "https://www.stats.gov.cn/sj/ndsj/2020/indexch.htm",
+      "image_url": "https://www.stats.gov.cn/sj/ndsj/2020/html/C0206.jpg",
+      "local_file": "data/raw/source_images/nbs-2020-table2-6.jpg",
+      "years_used": "2010",
+      "sha256": "29d50eabb2522b65d35e53f09008d09ad024bcf074733466a4794a05ceefa1c1",
+      "raw_csv": "data/raw/nbs-2020-table2-6.csv"
+    },
+    {
+      "table": "中国统计年鉴2021 表2-5 分地区年末人口数",
+      "page": "https://www.stats.gov.cn/sj/ndsj/2021/indexch.htm",
+      "image_url": "https://www.stats.gov.cn/sj/ndsj/2021/html/C02-05.jpg",
+      "local_file": "data/raw/source_images/nbs-2021-table2-5.jpg",
+      "years_used": "2011-2020",
+      "sha256": "39ed8eb1f3224ceb7a0d829ecd79a084d9ef1469b2d5db448e4c6310623849d3",
+      "raw_csv": "data/raw/nbs-2021-table2-5.csv"
+    },
+    {
+      "table": "中国统计年鉴2024 表2-5 分地区年末人口数",
+      "page": "https://www.stats.gov.cn/sj/ndsj/2024/indexch.htm",
+      "image_url": "https://www.stats.gov.cn/sj/ndsj/2024/html/C02-05.jpg",
+      "local_file": "data/raw/source_images/nbs-2024-table2-5.jpg",
+      "years_used": "2014-2023（2014-2020 仅用于与2021年鉴交叉校验）",
+      "sha256": "4e712a383c57a106893ca76ec67acd8e3f099fb2d03124e382e3bf06a91401c8",
+      "raw_csv": "data/raw/nbs-2024-table2-5.csv"
+    }
+  ]
+}
